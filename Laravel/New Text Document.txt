@@ -1,0 +1,89 @@
+@section('content')
+<table class="table">
+    <thead>
+        <tr >
+            <th scope="col" class="bg-transparent text-white">ID</th>
+            <th scope="col" class="bg-transparent text-white">Name</th>
+            <th scope="col" class="bg-transparent text-white">Email</th>
+            <th scope="col" class="bg-transparent text-white">Actions</th>
+        </tr>
+    </thead>
+   
+    <tbody> 
+@foreach($users as $user){
+    <tr>
+        <td class="bg-transparent text-white">  </td>
+        <td class="bg-transparent text-white">  </td>
+        <td class="bg-transparent text-white">  </td>
+        <td class="bg-transparent text-white">  </td>
+        <td class="bg-transparent text-white">  </td>
+        <td class="bg-transparent text-white">
+            <a href="" class="btn btn-sm btn-primary">Show</a>
+            <a href="" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="" class="btn btn-sm btn-danger">Delete</a>
+        </td>
+    </tr>
+}
+@endforeach
+</tbody>
+</table>
+@endsection
+
+
+
+FACEBOOK_CLIENT_ID="1507298433149365"
+FACEBOOK_CLIENT_SECRET="089d9c88df52aed11ca72ef24ea023e9"
+FACEBOOK_CALLBACK_URL=http://localhost:8000/auth/facebook/callback
+
+
+
+<?php
+
+namespace App\Http\Controllers;
+use App\Models\SocialUser;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Laravel\Socialite\Facades\Socialite;
+
+
+use Illuminate\Http\Request;
+
+class SocialController extends Controller
+{
+    public function auth () {
+        return view('auth.social');
+    }
+
+    public function redirect(string $provider) {
+        return Socialite::driver($provider)->redirect();
+    }
+
+    public function callback(string $provider) {
+        $providerUser = Socialite::driver($provider)->user();
+
+        $socialUser = SocialUser::firstOrCreate (
+            [
+                'provider' => 'facebook',
+                'provider_user_id' => $providerUser->getId(),
+            ],
+            [
+                'token'=> $providerUser->token,
+            ]
+        );
+
+        if(!$socialUser->user_id) {
+            $user = User::create([
+                'name' => $providerUser->getName(),
+                'email' => $providerUser->getEmail(),
+                'password' => 'any_password',
+            ]);
+            $socialUser->user()->associate($user)->save();
+        }
+
+        Auth::LoginUsingId($socialUser->user_id);
+
+        return redirect('/dashboard');
+    }
+}
